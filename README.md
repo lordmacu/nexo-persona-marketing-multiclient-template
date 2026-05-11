@@ -28,16 +28,17 @@ Each agent:
 
 ### Step 0 — Install nexo-rs
 
-Pick a channel from the
-[installation guide](https://lordmacu.github.io/nexo-rs/getting-started/installation.html):
+One-liner installer (delegates to `cargo install --git` until the
+Phase 27.2 binary pipeline ships its first GA assets):
 
 ```bash
-cargo install --git https://github.com/lordmacu/nexo-rs nexo-rs
-# OR pre-built binary: https://github.com/lordmacu/nexo-rs/releases
-# OR Docker:           docker pull ghcr.io/lordmacu/nexo-rs:latest
-
+curl -fsSL https://lordmacu.github.io/nexo-rs/install.sh | bash
 nexo --version   # ≥ 0.1.6
 ```
+
+Or Docker: `docker pull ghcr.io/lordmacu/nexo-rs:latest`. Full
+channel matrix in the
+[installation guide](https://lordmacu.github.io/nexo-rs/getting-started/installation.html).
 
 ### Step 1 — Install the pack (canonical)
 
