@@ -1,0 +1,43 @@
+# nexo-rs persona pack manifest (v2).
+#
+# Multi-client marketing automation template. Ships THREE
+# distinct agents (intake / retention / exec) each pinned to a
+# different model + marketing plugin instance, demonstrating
+# the multi-tenant single-install pattern. Operators install
+# via:
+#   nexo persona install lordmacu/nexo-persona-marketing-multiclient-template
+#
+# The pack is a starting point — operators rename the agents
+# (`marketing_acme_*` → `marketing_<their-client>_*`), tune
+# each system_prompt, configure the matching marketing plugin
+# instances in their daemon's plugins config.
+#
+# Schema reference: https://lordmacu.github.io/nexo-rs/personas/install.html
+
+manifest_version = 2
+
+[persona]
+id          = "marketing-multi"
+version     = "0.1.0"
+description = "Multi-client marketing automation template — 3 agents (intake/retention/exec) per-client with different LLMs and proactive cadences."
+min_nexo_version = ">=0.1.6"
+homepage    = "https://github.com/lordmacu/nexo-persona-marketing-multiclient-template"
+
+[persona.requires]
+# Note: the `marketing` plugin is a placeholder name; operators
+# pick the actual channel plugin (whatsapp / telegram / email)
+# that fits their marketing surface and update the agent
+# `plugins:` + `inbound_bindings[].plugin:` accordingly.
+plugins  = ["marketing"]
+features = []
+
+[persona.contributes]
+agent_configs          = ["agents.d/marketing-multi.yaml"]
+plugin_configs_partial = []
+secrets_templates      = []
+workspace_seed         = "data/workspace/"
+
+[persona.meta]
+author     = "Cristian García <informacion@cristiangarcia.co>"
+license    = "MIT"
+repository = "https://github.com/lordmacu/nexo-persona-marketing-multiclient-template"

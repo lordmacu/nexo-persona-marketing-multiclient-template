@@ -1,0 +1,104 @@
+name: Release v2 persona pack
+
+# On tag push of the form `vX.Y.Z`, build the noarch tarball
+# matching the v2 wire convention consumed by `nexo persona
+# install` (cody-cli-install F1-F7 in nexo-rs):
+#
+#   persona.toml                                    (the v2 manifest)
+#   <persona-id>-<version>-noarch.tar.gz            (the pack)
+#   <persona-id>-<version>-noarch.tar.gz.sha256     (single-line hex)
+#
+# Then create the GitHub Release at the tag and upload the three
+# assets. The persona id is read from `persona.toml` so this
+# workflow is reusable across packs without editing.
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+permissions:
+  contents: write   # create release + upload assets
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Derive version + persona id
+        id: meta
+        run: |
+          tag="${GITHUB_REF#refs/tags/}"
+          version="${tag#v}"
+          persona_id=$(grep -E '^id\s*=' persona.toml | head -1 | sed -E 's/.*"([^"]+)".*/\1/')
+          echo "tag=${tag}" >> "$GITHUB_OUTPUT"
+          echo "version=${version}" >> "$GITHUB_OUTPUT"
+          echo "persona_id=${persona_id}" >> "$GITHUB_OUTPUT"
+          echo "Building release for tag=${tag} version=${version} persona_id=${persona_id}"
+
+      - name: Sanity-check persona.toml version matches tag
+        run: |
+          declared=$(grep -E '^version\s*=' persona.toml | head -1 | sed -E 's/.*"([^"]+)".*/\1/')
+          if [ "$declared" != "${{ steps.meta.outputs.version }}" ]; then
+            echo "::error::persona.toml declares version=$declared but tag is ${{ steps.meta.outputs.version }}"
+            exit 1
+          fi
+          echo "persona.toml version matches tag (${declared})"
+
+      - name: Sanity-check manifest_version is 2
+        run: |
+          mv=$(grep -E '^manifest_version\s*=' persona.toml | head -1 | sed -E 's/.*=\s*([0-9]+).*/\1/')
+          if [ "$mv" != "2" ]; then
+            echo "::error::persona.toml manifest_version is $mv; v2 is required for nexo persona install"
+            exit 1
+          fi
+          echo "manifest_version = 2"
+
+      - name: Build noarch tarball
+        id: tarball
+        run: |
+          version="${{ steps.meta.outputs.version }}"
+          persona_id="${{ steps.meta.outputs.persona_id }}"
+          name="${persona_id}-${version}-noarch.tar.gz"
+          # Build under a clean staging dir so .git, .github, build
+          # artifacts, and CHANGELOG don't leak into the pack.
+          staging="$(mktemp -d)"
+          rsync -a \
+            --exclude='.git' \
+            --exclude='.github' \
+            --exclude='CHANGELOG.md' \
+            --exclude='install.sh' \
+            --exclude='*.tar.gz' \
+            --exclude='*.sha256' \
+            ./ "${staging}/${persona_id}-${version}/"
+          (cd "${staging}" && tar -czf "${GITHUB_WORKSPACE}/${name}" "${persona_id}-${version}")
+          ls -la "${name}"
+          echo "name=${name}" >> "$GITHUB_OUTPUT"
+
+      - name: Compute sha256
+        id: sha
+        run: |
+          name="${{ steps.tarball.outputs.name }}"
+          sha=$(sha256sum "${name}" | awk '{print $1}')
+          printf '%s\n' "${sha}" > "${name}.sha256"
+          cat "${name}.sha256"
+          echo "sha=${sha}" >> "$GITHUB_OUTPUT"
+
+      - name: Create release + upload assets
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          tag="${{ steps.meta.outputs.tag }}"
+          name="${{ steps.tarball.outputs.name }}"
+          if ! gh release view "${tag}" >/dev/null 2>&1; then
+            gh release create "${tag}" \
+              --title "${tag}" \
+              --notes "v2 persona pack for nexo-rs cody-cli-install. See CHANGELOG.md."
+          fi
+          gh release upload "${tag}" \
+            persona.toml \
+            "${name}" \
+            "${name}.sha256" \
+            --clobber
