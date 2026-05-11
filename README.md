@@ -28,8 +28,14 @@ Each agent:
 
 ### Step 0 — Install nexo-rs
 
+Pick a channel from the
+[installation guide](https://lordmacu.github.io/nexo-rs/getting-started/installation.html):
+
 ```bash
-curl -fsSL https://nexo-rs.dev/install.sh | bash
+cargo install --git https://github.com/lordmacu/nexo-rs nexo-rs
+# OR pre-built binary: https://github.com/lordmacu/nexo-rs/releases
+# OR Docker:           docker pull ghcr.io/lordmacu/nexo-rs:latest
+
 nexo --version   # ≥ 0.1.6
 ```
 
